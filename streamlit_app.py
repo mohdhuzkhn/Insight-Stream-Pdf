@@ -38,46 +38,68 @@ vector_store, ai = init_engines()
 # 4. Sidebar: PDF Upload
 with st.sidebar:
     st.header("📥 Document Management")
-    
-      # --- ADD THIS BACK: The Upload Logic ---
     uploaded_file = st.file_uploader("Choose a PDF", type="pdf")
-    
+
     if uploaded_file:
+        # Check if this is a NEW file
+        if (
+            "current_file" not in st.session_state
+            or st.session_state.current_file != uploaded_file.name
+        ):
+            st.session_state.current_file = uploaded_file.name
+            # Reset state for new file
+            if "full_chunks" in st.session_state:
+                del st.session_state.full_chunks
+
         if st.button("🚀 Process & Upload to Cloud"):
-            with st.spinner("Processing PDF..."):
-                # Save temp file
+            with st.status("Processing...", expanded=True) as status:
+                st.write("Reading PDF...")
                 with open("temp.pdf", "wb") as f:
                     f.write(uploaded_file.getbuffer())
-                
-                # Process chunks
-                chunks, filename = process_pdf_file("temp.pdf")
-                
-                if chunks:
-                    # Upload to their specific namespace
-                    vector_store.add_documents(chunks, filename, namespace=st.session_state.user_namespace)
-                    st.success(f"✅ Pdf is ready in your private session!")
-                
-                os.remove("temp.pdf")
-    # ---------------------------------------
 
-       # --- NEW: THE SUMMARY BUTTON ---
+                chunks, filename = process_pdf_file("temp.pdf")
+
+                if chunks:
+                    st.write(f"Encoding {len(chunks)} chunks & Uploading to Cloud...")
+                    # IMPORTANT: Save to session state so Summary button sees it
+                    st.session_state.full_chunks = chunks
+
+                    # Upload to Pinecone
+                    vector_store.add_documents(
+                        chunks, filename, namespace=st.session_state.user_namespace
+                    )
+
+                    st.write("✅ Upload Complete!")
+                    status.update(label="Ready!", state="complete", expanded=False)
+                    st.success("You can now ask questions!")
+
+                os.remove("temp.pdf")
+                st.rerun()  # Refresh to show the summary button
+
+    # --- THE SUMMARY BUTTON ---
+    # This will now appear correctly after the rerun above
     if "full_chunks" in st.session_state:
         st.divider()
+        st.info("💡 Document loaded in Cloud")
         if st.button("📝 Generate Full Summary"):
             with st.spinner("Analyzing whole document..."):
                 summary = ai.summarize_all(st.session_state.full_chunks)
-                # We add the summary to the chat history
-                st.session_state.messages.append({"role": "assistant", "content": f"### 📄 Document Summary\n{summary}"})
+                st.session_state.messages.append(
+                    {
+                        "role": "assistant",
+                        "content": f"### 📄 Document Summary\n{summary}",
+                    }
+                )
                 st.rerun()
     # ------------------------------
     st.divider()
-    
+
     # 2. User Reset (Only deletes THEIR data)
     if st.button("🧹 Clear My Session"):
         with st.spinner("Deleting your files..."):
             success = vector_store.delete_user_data(st.session_state.user_namespace)
             if success:
-                st.session_state.messages = [] # Clear their chat too
+                st.session_state.messages = []  # Clear their chat too
                 st.success("Your data has been removed from the cloud.")
                 st.rerun()
 
@@ -86,7 +108,7 @@ with st.sidebar:
     # 3. ADMIN PANEL (Only for YOU)
     with st.expander("🔑 Admin Tools"):
         admin_password = st.text_input("Enter Admin Password", type="password")
-        # In a no-budget project, you can hardcode a simple password 
+        # In a no-budget project, you can hardcode a simple password
         # or better, add it to st.secrets["ADMIN_PASSWORD"]
         if admin_password == st.secrets.get("ADMIN_PASSWORD", "School_Project_2024"):
             st.warning("Warning: This will delete data for ALL users!")
@@ -107,7 +129,8 @@ for message in st.session_state.messages:
 # Chat Input
 if prompt := st.chat_input("Ask something about your document..."):
     # User message
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    # st.session_state.messages.append({"role": "user", "content": prompt})
+    result = ai.generate_answer(prompt, vector_store.search(prompt, top_k=8, namespace=st.session_state.user_namespace))
     with st.chat_message("user"):
         st.markdown(prompt)
 
