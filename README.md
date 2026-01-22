@@ -43,9 +43,8 @@
 Data Isolation: Every session is assigned a unique UUID namespace.
 Manual Purge: Users can clear their specific cloud data with one click.
 Secrets Management: API keys are never stored in the code; they are managed via encrypted secrets.
+
 ---
 
 👨‍💻 Author
-Muhammad Huzaifa Khan
-AI Developer & Student at AI School
-GitHub | Project Link
+Muhammad Huzaifa Khan | AI Developer 
