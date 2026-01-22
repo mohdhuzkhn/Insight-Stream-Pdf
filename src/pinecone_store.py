@@ -87,13 +87,22 @@ class PineconeVectorStore:
             return False
 
     def master_clear_all_data(self):
-        """ADMIN ONLY: Deletes EVERYTHING in the index across all namespaces"""
-        try:
-            # Note: For some Pinecone versions, you must iterate through namespaces
-            # But usually, this clears the entire default index
-            self.index.delete(delete_all=True) 
-            print("🚨 MASTER WIPE: All index data deleted!")
-            return True
-        except Exception as e:
-            print(f"❌ Master Clear Error: {e}")
-            return False
+            """ADMIN ONLY: Deletes ALL data across ALL namespaces"""
+            try:
+                # For Serverless indexes, we iterate through namespaces to ensure a clean wipe
+                stats = self.index.describe_index_stats()
+                namespaces = stats.get('namespaces', {}).keys()
+                
+                if not namespaces:
+                    print("ℹ️ No data found in any namespace.")
+                    return True
+                    
+                for ns in namespaces:
+                    self.index.delete(delete_all=True, namespace=ns)
+                    
+                print(f"🚨 MASTER WIPE COMPLETE: Cleared {len(namespaces)} namespaces.")
+                return True
+            except Exception as e:
+                # This will show you the REAL error in your terminal/logs
+                print(f"❌ Master Clear Error Details: {e}")
+                return False
