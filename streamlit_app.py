@@ -55,12 +55,21 @@ with st.sidebar:
                 if chunks:
                     # Upload to their specific namespace
                     vector_store.add_documents(chunks, filename, namespace=st.session_state.user_namespace)
-                    st.success(f"✅ {filename} is ready in your private session!")
+                    st.success(f"✅ Pdf is ready in your private session!")
                 
                 os.remove("temp.pdf")
     # ---------------------------------------
 
-    
+       # --- NEW: THE SUMMARY BUTTON ---
+    if "full_chunks" in st.session_state:
+        st.divider()
+        if st.button("📝 Generate Full Summary"):
+            with st.spinner("Analyzing whole document..."):
+                summary = ai.summarize_all(st.session_state.full_chunks)
+                # We add the summary to the chat history
+                st.session_state.messages.append({"role": "assistant", "content": f"### 📄 Document Summary\n{summary}"})
+                st.rerun()
+    # ------------------------------
     st.divider()
     
     # 2. User Reset (Only deletes THEIR data)
