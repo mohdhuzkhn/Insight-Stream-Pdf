@@ -39,7 +39,27 @@ vector_store, ai = init_engines()
 with st.sidebar:
     st.header("📥 Document Management")
     
-    # 1. User Upload logic ... (already exists)
+      # --- ADD THIS BACK: The Upload Logic ---
+    uploaded_file = st.file_uploader("Choose a PDF", type="pdf")
+    
+    if uploaded_file:
+        if st.button("🚀 Process & Upload to Cloud"):
+            with st.spinner("Processing PDF..."):
+                # Save temp file
+                with open("temp.pdf", "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                
+                # Process chunks
+                chunks, filename = process_pdf_file("temp.pdf")
+                
+                if chunks:
+                    # Upload to their specific namespace
+                    vector_store.add_documents(chunks, filename, namespace=st.session_state.user_namespace)
+                    st.success(f"✅ {filename} is ready in your private session!")
+                
+                os.remove("temp.pdf")
+    # ---------------------------------------
+
     
     st.divider()
     
