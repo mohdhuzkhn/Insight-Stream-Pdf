@@ -1,0 +1,24 @@
+# 1. Private/Security (CRITICAL)
+API_Key_*.txt
+.env
+.streamlit/
+*.txt
+!requirements.txt
+
+# 2. Large System Folders (CRITICAL)
+venv/
+env/
+__pycache__/
+.dist/
+
+# 3. Local Data (User will upload their own on the web)
+data/
+*.pdf
+sample.pdf
+sample2.pdf
+
+# 4. Old Version backups
+old_version_backup/
+llama_ollama.py
+model_switcher.py
+insight_stream_app.py
